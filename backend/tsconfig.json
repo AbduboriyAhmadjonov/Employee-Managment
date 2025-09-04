@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // modern JS output
+    "module": "NodeNext", // required for ESM in Node
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
