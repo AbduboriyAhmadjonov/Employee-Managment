@@ -1,15 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2022", // modern JS output
-    "module": "NodeNext", // required for ESM in Node
-    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "module": "node20",
+    "moduleResolution": "node16",
     "rootDir": "src",
     "outDir": "dist",
-
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true
+  },
+  "ts-node": {
+    "esm": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
