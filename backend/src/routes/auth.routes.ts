@@ -1,64 +1,64 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-// Dummy user store for demonstration
-const users: any[] = [];
-
-// Secret for JWT (in production, use env variable)
-const JWT_SECRET = 'your_jwt_secret';
-
-// Middleware to authenticate JWT
-function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-      if (err) return res.status(403).json({ message: 'Invalid token' });
-      (req as any).user = user;
-      next();
-    });
-  } else {
-    res.status(401).json({ message: 'Authorization header missing' });
-  }
-}
+import bcrypt from 'bcryptjs';
+import User from '../models/user.model.js';
+import authenticateJWT from '../middleware/auth.middleware.js';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'some shitty secret';
 
 // Register route
-router.post('/api/auth/register', (req: Request, res: Response) => {
-  const { username, password, role } = req.body;
-  if (!username || !password || !role) {
-    return res.status(400).json({ message: 'Missing fields' });
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { name, email, password, role, profileImage } = req.body;
+    if (!name || !email || !password || !role || !profileImage) {
+      return res.status(400).json({ message: 'Missing fields' });
+    }
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ message: 'User already exists' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, email, password: hashedPassword, role, profileImage });
+    await user.save();
+    res.status(201).json({ success: true, user: { email, name, role, profileImage } });
+  } catch (error) {
+    // console.error('Error registering user:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-  if (users.find((u) => u.username === username)) {
-    return res.status(409).json({ message: 'User already exists' });
-  }
-  const user = { id: users.length + 1, username, password, role };
-  users.push(user);
-  res.status(201).json({ message: 'User registered', user: { id: user.id, username, role } });
 });
 
 // Login route
-router.post('/api/auth/login', (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  const user = users.find((u) => u.username === username && u.password === password);
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
+      expiresIn: '1h',
+    });
+    res.json({
+      success: true,
+      token,
+      user: { email, name: user.name, role: user.role, profileImage: user.profileImage || null },
+    });
+  } catch (error) {
+    // console.error('Error logging in user:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, {
-    expiresIn: '1h',
-  });
-  res.json({ token });
 });
 
 // Profile route (protected)
-router.get('/api/auth/profile', authenticateJWT, (req: Request, res: Response) => {
-  const user = (req as any).user;
-  res.json({ user });
+router.get('/profile', authenticateJWT, async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email }).select('-password');
+  res.json({ success: true, user });
 });
 
 // Logout route (optional for stateless JWT)
-router.post('/api/auth/logout', (req: Request, res: Response) => {
+router.post('/logout', (req: Request, res: Response) => {
   // For stateless JWT, logout is handled on client side by deleting token
   res.json({ message: 'Logged out (client should delete token)' });
 });
