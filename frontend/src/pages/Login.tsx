@@ -25,9 +25,6 @@ export default function Login() {
         setError(data.message || 'Login failed');
       }
       console.log('Login successful:', data);
-      // Handle successful login (e.g., redirect, store tokens)
-      // Navigate to admin dashboard
-      // window.location.href = '/admin-dashboard';
     } catch (error) {
       console.error('Error logging in:', error);
     }
