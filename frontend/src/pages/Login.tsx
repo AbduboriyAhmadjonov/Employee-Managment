@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useAuth } from '../context/authContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState(null);
+  const {login} = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,12 +23,16 @@ export default function Login() {
 
       const data = await response.json();
       console.log(data);
-      if (data.success === false) {
-        setError(data.message || 'Login failed');
+      if (data.success) {
+        login(data.user);
       }
       console.log('Login successful:', data);
     } catch (error) {
-      console.error('Error logging in:', error);
+      if (error.response && !error.response.data.success) {
+        setError(error.response.data.message || 'Login failed');
+      } else {
+        setError('Server error. Please try again later.');
+      }
     }
   };
 
